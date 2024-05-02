@@ -2,7 +2,7 @@
 Multi-user-chat between different terminals. Using Named Pipes and multiprocessing.
 
 Necessary Libraries:
-sudo apt-get install libncurses5-dev libncursesw5-dev
+```sudo apt-get install libncurses5-dev libncursesw5-dev```
 
 Short description of operation:
 A program launched with the parameter "--start" creates a background server process responsible for:
@@ -41,11 +41,11 @@ Makefile - responsible for faster command entry.
 User Manual:
 
 In the first console:
-1. Execute the command make main or gcc server.c server.h myChat.c login.c login.h -o myChat -Wall -lncurses;
-2. Execute the command make server or ./myChat --start
+1. Execute the command ```make main``` or ```gcc server.c server.h myChat.c login.c login.h -o myChat -Wall -lncurses```
+2. Execute the command ```make server``` or ```./myChat --start```
 
 In subsequent consoles:
-./myChat --login [Username]
+```./myChat --login [Username]```
 
 After pressing 's' in the user's console:
 To Whom: [Recipient]
