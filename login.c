@@ -18,6 +18,86 @@ void handler2(int signum){
     flagc = 1;
 }
 
+void createConsole(){
+    initscr(); // Inicjalizacja ncurses
+    cbreak();  // Włącz tryb cbreak, wyłącz linie buforowane
+    noecho();  // Nie wyświetlaj wprowadzanych znaków na ekranie
+    nodelay(stdscr, TRUE); // Ustaw tryb nieblokujący dla getch()
+}
+
+void createFIFO(int fclient, char *name, char *info, int fserver_write){
+    fclient = mkfifo(name, 0666);
+    if (fclient < 0){
+        endwin();
+        sprintf(info, "not created %s", name);
+        perror(info);
+        syslog(LOG_INFO, info);
+        return -1;
+    }
+    else{
+        sprintf(info, "created %s", name);
+        printw("%s\n", info);
+        fserver_write = open("pipeServer", O_WRONLY);
+        if (write(fserver_write, info, 255*sizeof(char)) < 0) {
+            perror("Write error");
+            close(fserver_write);
+            return -1;
+        }
+        close(fserver_write);
+        syslog(LOG_INFO, info);
+    }
+}
+
+writeToServer(char *to, char *content, int fserver_write, char *message, char **argv){
+    nodelay(stdscr, FALSE);
+    echo();
+    printw("To whom: ");
+    refresh();
+    getstr(to);
+    printw("Message: ");
+    refresh();
+    getstr(content);
+    fserver_write = open("pipeServer", O_WRONLY);
+    if (fserver_write < 0) {
+        endwin();
+        perror("Fserver error (write)");
+        return -1;
+    }
+    sprintf(message, "%s:%s:%s", argv[2], to, content);
+    if (write(fserver_write, message, 255*sizeof(char)) < 0) {
+        endwin();
+        perror("Write error");
+        syslog(LOG_INFO, "Write to server FIFO error");
+        close(fserver_write);
+        return -1;
+    }
+    close(fserver_write);
+    nodelay(stdscr, TRUE);
+    noecho();
+}
+
+void readFromUser(int fclient_read, char *message2){
+    if (fclient_read < 0) {
+        endwin();
+        perror("Fifo error (read)");
+        return -1;
+    }
+    ssize_t bytes_read = read(fclient_read, message2, 255*sizeof(char));
+    if (bytes_read < 0) {
+        if(errno != EAGAIN && errno != EWOULDBLOCK){
+            endwin();
+            perror("Read error");
+            close(fclient_read);
+            syslog(LOG_INFO, "Read from user FIFO error");
+            return -1;
+        }
+    }   
+    if (bytes_read > 0){
+        printw("%s\n",message2);
+        refresh();
+    }
+}
+
 void end(char *name, char *info, int fserver_write){
     sprintf(info, "deleted %s\n",name);
     syslog(LOG_INFO, info);
@@ -25,10 +105,12 @@ void end(char *name, char *info, int fserver_write){
     if (write(fserver_write, info, 255*sizeof(char)) < 0) {
         perror("Write error");
         close(fserver_write);
+        closelog();
         exit(EXIT_FAILURE);  
     }
     close(fserver_write);
     fclose(stdout);
+    closelog();
     exit(EXIT_SUCCESS);
 }
 
@@ -54,30 +136,8 @@ int login(int argc, char **argv){
             }
         }
     }else{
-        initscr(); // Inicjalizacja ncurses
-        cbreak();  // Włącz tryb cbreak, wyłącz linie buforowane
-        noecho();  // Nie wyświetlaj wprowadzanych znaków na ekranie
-        nodelay(stdscr, TRUE); // Ustaw tryb nieblokujący dla getch()
-        fclient = mkfifo(name, 0666);
-        if (fclient < 0){
-            endwin();
-            sprintf(info, "not created %s", name);
-            perror(info);
-            syslog(LOG_INFO, info);
-            return -1;
-        }
-        else{
-            sprintf(info, "created %s", name);
-            printw("%s\n", info);
-            fserver_write = open("pipeServer", O_WRONLY);
-            if (write(fserver_write, info, 255*sizeof(char)) < 0) {
-                perror("Write error");
-                close(fserver_write);
-                return -1;
-            }
-            close(fserver_write);
-            syslog(LOG_INFO, info);
-        }
+        createConsole();
+        createFIFO(fclient, name, info, fserver_write);
         fclient_read = open(name, O_RDONLY | O_NONBLOCK);
         printw("Type 's' to send message or type 'd' to send file\n");
         while(1){
@@ -87,54 +147,11 @@ int login(int argc, char **argv){
                 return 0;   
             }
             if ((ch = getch()) == 's') {
-                nodelay(stdscr, FALSE);
-                echo();
-                printw("To whom: ");
-                refresh();
-                getstr(to);
-                printw("Message: ");
-                refresh();
-                getstr(content);
-                fserver_write = open("pipeServer", O_WRONLY);
-                if (fserver_write < 0) {
-                    endwin();
-                    perror("Fserver error (write)");
-                    return -1;
-                }
-                sprintf(message, "%s:%s:%s", argv[2], to, content);
-                if (write(fserver_write, message, 255*sizeof(char)) < 0) {
-                    endwin();
-                    perror("Write error");
-                    syslog(LOG_INFO, "Write to server FIFO error");
-                    close(fserver_write);
-                    return -1;
-                }
-                close(fserver_write);
-                nodelay(stdscr, TRUE);
-                noecho();
+                writeToServer(to, content, fserver_write, message, argv);
             }
-            if (fclient_read < 0) {
-                endwin();
-                perror("Fifo error (read)");
-                return -1;
-            }
-            ssize_t bytes_read = read(fclient_read, message2, 255*sizeof(char));
-            if (bytes_read < 0) {
-                if(errno != EAGAIN && errno != EWOULDBLOCK){
-                    endwin();
-                    perror("Read error");
-                    close(fclient_read);
-                    syslog(LOG_INFO, "Read from user FIFO error");
-                    return -1;
-                }
-            }   
-            if (bytes_read > 0){
-                printw("%s\n",message2);
-                refresh();
-            }
+            readFromUser(fclient_read, message2);
         }
         close(fclient_read);
     }
-    closelog();
     return 0;
 }
