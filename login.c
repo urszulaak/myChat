@@ -105,6 +105,7 @@ int login(int argc, char **argv){
                 if (write(fserver_write, message, 255*sizeof(char)) < 0) {
                     endwin();
                     perror("Write error");
+                    syslog(LOG_INFO, "Write to server FIFO error");
                     close(fserver_write);
                     return -1;
                 }
@@ -123,7 +124,7 @@ int login(int argc, char **argv){
                     endwin();
                     perror("Read error");
                     close(fclient_read);
-                    syslog(LOG_INFO, "Blad przeslania wiadomosci");
+                    syslog(LOG_INFO, "Read from user FIFO error");
                     return -1;
                 }
             }   

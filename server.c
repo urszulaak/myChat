@@ -54,12 +54,13 @@ int server(){
         while(1){
             fserver_read = open("pipeServer", O_RDONLY);
             if (fserver_read < 0) {
-                perror("server.c Fserver error (read)");
+                perror("server error (read)");
                 return -1;
             }
             ssize_t bytes_read = read(fserver_read, message, 255*sizeof(char));
             if (bytes_read < 0) {
                 perror("server.c Read error");
+                syslog(LOG_INFO, "Read from server FIFO error");
                 close(fserver_read);
                 return -1;
             }
@@ -137,6 +138,8 @@ int server(){
                         printf("From: %s\nTo: %s\nMessage: %s\n",tab[0],tab[1],tab[2]);
                         if (write(fclient_write, message2, 255*sizeof(char)) < 0) {
                                 perror("Write error");
+                                syslog(LOG_INFO, "Write to user FIFO error");
+
                                 return -1;
                         }
                     }
