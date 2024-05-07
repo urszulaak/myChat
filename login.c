@@ -25,14 +25,14 @@ void createConsole(){
     nodelay(stdscr, TRUE); // Ustaw tryb nieblokujący dla getch()
 }
 
-void createFIFO(int fclient, char *name, char *info, int fserver_write){
-    fclient = mkfifo(name, 0666);
+void createUser(int *fclient, char *name, char *info, int fserver_write){
+    *fclient = mkfifo(name, 0666);
     if (fclient < 0){
         endwin();
         sprintf(info, "not created %s", name);
         perror(info);
         syslog(LOG_INFO, info);
-        return -1;
+        exit(EXIT_FAILURE);
     }
     else{
         sprintf(info, "created %s", name);
@@ -41,14 +41,14 @@ void createFIFO(int fclient, char *name, char *info, int fserver_write){
         if (write(fserver_write, info, 255*sizeof(char)) < 0) {
             perror("Write error");
             close(fserver_write);
-            return -1;
+            exit(EXIT_FAILURE);
         }
         close(fserver_write);
         syslog(LOG_INFO, info);
     }
 }
 
-writeToServer(char *to, char *content, int fserver_write, char *message, char **argv){
+void writeToServer(char *to, char *content, int fserver_write, char *message, char **argv){
     nodelay(stdscr, FALSE);
     echo();
     printw("To whom: ");
@@ -61,7 +61,7 @@ writeToServer(char *to, char *content, int fserver_write, char *message, char **
     if (fserver_write < 0) {
         endwin();
         perror("Fserver error (write)");
-        return -1;
+        exit(EXIT_FAILURE);
     }
     sprintf(message, "%s:%s:%s", argv[2], to, content);
     if (write(fserver_write, message, 255*sizeof(char)) < 0) {
@@ -69,7 +69,7 @@ writeToServer(char *to, char *content, int fserver_write, char *message, char **
         perror("Write error");
         syslog(LOG_INFO, "Write to server FIFO error");
         close(fserver_write);
-        return -1;
+        exit(EXIT_FAILURE);
     }
     close(fserver_write);
     nodelay(stdscr, TRUE);
@@ -80,7 +80,7 @@ void readFromUser(int fclient_read, char *message2){
     if (fclient_read < 0) {
         endwin();
         perror("Fifo error (read)");
-        return -1;
+        exit(EXIT_FAILURE);
     }
     ssize_t bytes_read = read(fclient_read, message2, 255*sizeof(char));
     if (bytes_read < 0) {
@@ -89,7 +89,7 @@ void readFromUser(int fclient_read, char *message2){
             perror("Read error");
             close(fclient_read);
             syslog(LOG_INFO, "Read from user FIFO error");
-            return -1;
+            exit(EXIT_FAILURE);
         }
     }   
     if (bytes_read > 0){
@@ -117,10 +117,10 @@ void end(char *name, char *info, int fserver_write){
 
 int login(int argc, char **argv){
     int user = fork();
-    int fclient_read, fserver_write, flag_start=1;
+    int fclient_read = -1, fserver_write = -1;
     char name[256], info[256];
     int ch;
-    int fclient;
+    int fclient = -1;
     char to[256], content[256], message[256], message2[512];
     sprintf(name, "pipe%s", argv[2]);
     openlog("Signal_Hadler2", LOG_PID | LOG_CONS, LOG_USER);
@@ -137,7 +137,7 @@ int login(int argc, char **argv){
         }
     }else{
         createConsole();
-        createFIFO(fclient, name, info, fserver_write);
+        createUser(&fclient, name, info, fserver_write);
         fclient_read = open(name, O_RDONLY | O_NONBLOCK);
         printw("Type 's' to send message or type 'd' to send file\n");
         while(1){
