@@ -7,9 +7,9 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <signal.h>
-#include <string.h>
 #include <ncurses.h>
 #include <errno.h>
+#include <sys/wait.h>
 
 volatile int flagc = 0;
 
@@ -27,11 +27,11 @@ void createConsole(){
 
 void createUser(int *fclient, char *name, char *info, int fserver_write){
     *fclient = mkfifo(name, 0666);
-    if (fclient < 0){
+    if (*fclient < 0){
         endwin();
         sprintf(info, "not created %s", name);
         perror(info);
-        syslog(LOG_INFO, info);
+        syslog(LOG_INFO, "%s" ,info);
         exit(EXIT_FAILURE);
     }
     else{
@@ -44,7 +44,7 @@ void createUser(int *fclient, char *name, char *info, int fserver_write){
             exit(EXIT_FAILURE);
         }
         close(fserver_write);
-        syslog(LOG_INFO, info);
+        syslog(LOG_INFO, "%s" ,info);
     }
 }
 
@@ -100,7 +100,7 @@ void readFromUser(int fclient_read, char *message2){
 
 void end(char *name, char *info, int fserver_write){
     sprintf(info, "deleted %s\n",name);
-    syslog(LOG_INFO, info);
+    syslog(LOG_INFO, "%s" ,info);
     fserver_write = open("pipeServer", O_WRONLY);
     if (write(fserver_write, info, 255*sizeof(char)) < 0) {
         perror("Write error");
@@ -143,7 +143,7 @@ int login(int argc, char **argv){
         while(1){
             if(flagc){
                 endwin();
-                wait();
+                waitpid(user, NULL, 0);
                 return 0;   
             }
             if ((ch = getch()) == 's') {

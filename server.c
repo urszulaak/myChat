@@ -20,7 +20,7 @@ void handler(int signum){
         for(int i=0;i<c_user;i++){
             if(strcmp(users[i]," ") != 0){
                 fclient_write = open(users[i], O_WRONLY);
-                if (write(fclient_write, "Server stopped", 255*sizeof(char)) < 0) {
+                if (write(fclient_write, "Server stopped", strlen("Server stopped")) < 0) {
                     perror("Write error");
                     exit(EXIT_FAILURE);
                 }
