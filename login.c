@@ -36,7 +36,7 @@ void createUser(int *fclient, char *name, char *info, int fserver_write, char *d
     }
     else{
         if(downloadPath){
-            sprintf(info, "created %s %s", name, downloadPath);
+            sprintf(info, "created %s?%s", name, downloadPath);
         }else{
             sprintf(info, "created %s", name);
         }
@@ -124,7 +124,7 @@ int login(int argc, char **argv, char *downloadPath){
     char name[256], info[256];
     int ch;
     int fclient = -1;
-    char to[256], content[256], message[512], message2[512], toDownload[256];
+    char to[256], content[256], message[512], message2[512];
     sprintf(name, "pipe%s", argv[2]);
     openlog("Signal_Hadler2", LOG_PID | LOG_CONS, LOG_USER);
     signal(SIGQUIT, handler2);
@@ -152,14 +152,15 @@ int login(int argc, char **argv, char *downloadPath){
             if ((ch = getch()) == 's') {
                 writeToServer(to, content, fserver_write, message, argv);
             } else if ((ch = getch()) == 'd') {
+                nodelay(stdscr, FALSE);
+                echo();
                 printw("To whom: ");
                 refresh();
                 getstr(to);
-                printw("Enter the file path to send: ");
+                printw("Enter the file path: ");
                 refresh();
                 getstr(content);
-                sprintf(toDownload, "SEND%s", to);
-                sprintf(message, "%s:%s:%s",toDownload, content, downloadPath);
+                sprintf(message, "SEND-%s-%s",to, content);
                 fserver_write = open("pipeServer", O_WRONLY);
                 if (fserver_write < 0) {
                     endwin();
@@ -174,6 +175,8 @@ int login(int argc, char **argv, char *downloadPath){
                     exit(EXIT_FAILURE);
                 }
                 close(fserver_write);
+                nodelay(stdscr, TRUE);
+                noecho();
             }
             readFromUser(fclient_read, message2);
         }

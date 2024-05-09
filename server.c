@@ -40,6 +40,7 @@ void createServer(int *fserver){
     }
     else{
         syslog(LOG_INFO, "created pipeServer");
+        printf("created pipeServer\n");
     }
 }
 
@@ -75,19 +76,27 @@ void readFromServer(char *message, int *read_flag, char (*tab)[128]){
     }
 }
 
-void writeToUser(char *topipe, char *deleter, char *not_found, int *read_flag, char *message2, char (*tab)[128]){
+void writeToUser(char *topipe, char *deleter, char *not_found, int *read_flag, char *message2, char (*tab)[128], char (*download_flag)[256]){
     sprintf(topipe, "pipe%s", tab[1]);
     fclient_write = open(topipe, O_WRONLY);
     if (fclient_write < 0) {
         if(strncmp(tab[0],"created",7)==0){
+            printf("%s\n",tab[0]);
             char *token;
             token = strtok(tab[0], " ");
             token = strtok(NULL, "");
             if (token != NULL){
-                strcpy(users[c_user], token);
+                char *token2;
+                token2 = strtok(token, "?");
+                strcpy(users[c_user], token2);
+                token2 = strtok(NULL, "");
+                if(token2 != NULL){
+                    strcpy(download_flag[c_user], token2);
+                }
             }
             c_user++;
         }else if(strncmp(tab[0],"deleted",7)==0){
+            printf("%s\n",tab[0]);
             char *token;
             token = strtok(tab[0], " ");
             token = strtok(NULL, "");
@@ -102,8 +111,9 @@ void writeToUser(char *topipe, char *deleter, char *not_found, int *read_flag, c
             }
         }else if (strncmp(tab[0], "SEND", 4) == 0) {
             char *token;
-            token = strtok(tab[0], ":");
-            token = strtok(NULL, ":");
+            token = strtok(tab[0], "-");
+            token = strtok(NULL, "-");
+
             char *filePath = token;
             token = strtok(NULL, ":");
             char *destDirPath = token;
@@ -134,6 +144,7 @@ void writeToUser(char *topipe, char *deleter, char *not_found, int *read_flag, c
         }
     }else{
         if(strncmp(tab[0],"deleted",7)==0){
+            printf("%s\n",tab[0]);
             char *token;
             token = strtok(tab[0], " ");
             token = strtok(NULL, "");
@@ -148,8 +159,25 @@ void writeToUser(char *topipe, char *deleter, char *not_found, int *read_flag, c
             }
         }else if (strncmp(tab[0], "SEND", 4) == 0) {
             char *token;
+            int i, x;
             token = strtok(tab[2], ":");
             token = strtok(NULL, ":");
+            for(i=0;i<c_user;i++){
+                if(users[i] == token){
+                    x=1;
+                    break;
+                }else{
+                    x=0;
+                }
+            }
+            if(x){
+                sprintf(not_found,"There is no user like: %s",topipe);
+                perror(not_found);
+            }else if(download_flag[i]){
+                //operacje zwiazane z wysylaniem pliku, gdzie pod zmienna download_flag[i] jest sciezka docelowa
+            }else{
+                perror("This user doesn't have chosen file destination");
+            }
             char *filePath = token;
             token = strtok(NULL, ":");
             char *destDirPath = token;
@@ -176,6 +204,7 @@ void writeToUser(char *topipe, char *deleter, char *not_found, int *read_flag, c
             printf("File %s successfully copied to %s\n", fileName, destDirPath);
         } else {
             sprintf(message2, "%s:%s", tab[0], tab[2]);
+            printf("From; %s\nTo: %s\nMessage %s\n",tab[0], tab[1], tab[2]);
             if (write(fclient_write, message2, 255*sizeof(char)) < 0) {
                 perror("Write error");
                 syslog(LOG_INFO, "Write to user FIFO error");
@@ -192,14 +221,14 @@ int server(){
     char message[256], message2[512], topipe[256], not_found[256];
     char tab[3][128];
     int read_flag = 0;
-    char deleter[256];
+    char deleter[256], download_flag[50][256];
     openlog("Signal_Hadler", LOG_PID | LOG_CONS, LOG_USER);
     signal(SIGQUIT, handler);
     createServer(&fserver);
     while(1){
         readFromServer(message, &read_flag, tab);
         if(read_flag){
-            writeToUser(topipe, deleter, not_found, &read_flag, message2, tab);
+            writeToUser(topipe, deleter, not_found, &read_flag, message2, tab, download_flag);
         }
     }
     closelog();
