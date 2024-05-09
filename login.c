@@ -25,7 +25,7 @@ void createConsole(){
     nodelay(stdscr, TRUE); // Ustaw tryb nieblokujący dla getch()
 }
 
-void createUser(int *fclient, char *name, char *info, int fserver_write){
+void createUser(int *fclient, char *name, char *info, int fserver_write, char *downloadPath){
     *fclient = mkfifo(name, 0666);
     if (*fclient < 0){
         endwin();
@@ -35,7 +35,11 @@ void createUser(int *fclient, char *name, char *info, int fserver_write){
         exit(EXIT_FAILURE);
     }
     else{
-        sprintf(info, "created %s", name);
+        if(downloadPath){
+            sprintf(info, "created %s %s", name, downloadPath);
+        }else{
+            sprintf(info, "created %s", name);
+        }
         printw("%s\n", info);
         fserver_write = open("pipeServer", O_WRONLY);
         if (write(fserver_write, info, 255*sizeof(char)) < 0) {
@@ -114,14 +118,13 @@ void end(char *name, char *info, int fserver_write){
     exit(EXIT_SUCCESS);
 }
 
-
-int login(int argc, char **argv){
+int login(int argc, char **argv, char *downloadPath){
     int user = fork();
     int fclient_read = -1, fserver_write = -1;
     char name[256], info[256];
     int ch;
     int fclient = -1;
-    char to[256], content[256], message[256], message2[512];
+    char to[256], content[256], message[512], message2[512], toDownload[256];
     sprintf(name, "pipe%s", argv[2]);
     openlog("Signal_Hadler2", LOG_PID | LOG_CONS, LOG_USER);
     signal(SIGQUIT, handler2);
@@ -137,7 +140,7 @@ int login(int argc, char **argv){
         }
     }else{
         createConsole();
-        createUser(&fclient, name, info, fserver_write);
+        createUser(&fclient, name, info, fserver_write, downloadPath);
         fclient_read = open(name, O_RDONLY | O_NONBLOCK);
         printw("Type 's' to send message or type 'd' to send file\n");
         while(1){
@@ -148,6 +151,29 @@ int login(int argc, char **argv){
             }
             if ((ch = getch()) == 's') {
                 writeToServer(to, content, fserver_write, message, argv);
+            } else if ((ch = getch()) == 'd') {
+                printw("To whom: ");
+                refresh();
+                getstr(to);
+                printw("Enter the file path to send: ");
+                refresh();
+                getstr(content);
+                sprintf(toDownload, "SEND%s", to);
+                sprintf(message, "%s:%s:%s",toDownload, content, downloadPath);
+                fserver_write = open("pipeServer", O_WRONLY);
+                if (fserver_write < 0) {
+                    endwin();
+                    perror("Fserver error (write)");
+                    exit(EXIT_FAILURE);
+                }
+                if (write(fserver_write, message, sizeof(message)) < 0) {
+                    endwin();
+                    perror("Write error");
+                    syslog(LOG_INFO, "Write to server FIFO error");
+                    close(fserver_write);
+                    exit(EXIT_FAILURE);
+                }
+                close(fserver_write);
             }
             readFromUser(fclient_read, message2);
         }

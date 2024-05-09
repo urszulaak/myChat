@@ -1,4 +1,7 @@
-#ifndef MYLIB_H
-#define MYLIB_H
+#ifndef SERVER_H
+#define SERVER_H
+
 int server();
+int copyFile(const char *srcPath, const char *destPath);
+
 #endif
