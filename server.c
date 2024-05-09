@@ -163,7 +163,42 @@ void writeToUser(char *topipe, char *deleter, char *not_found, int *read_flag, c
                     break;
                 }
             }
-        } else {
+        }else if (strncmp(tab[0], "SEND", 4) == 0){
+            char *token;
+            int i, x=0;
+            token = strtok(tab[0], "-");
+            token = strtok(NULL, "-");
+            sprintf(topipe, "pipe%s", token);
+            for(i=0;i<c_user;i++){
+                if(strcmp(users[i], topipe) == 0){
+                    x=1;
+                    break;
+                }else if(!(token)){
+                    x=0;
+                    break;
+                }
+            }
+            if(!(strcmp(download_flag[i],"") == 0)){
+                token = strtok(NULL, ":");
+                char *filePath = token;
+                char *destDirPath = download_flag[i];
+                char command[256];
+                sprintf(command, "cp %s %s", filePath, destDirPath);
+                int result = system(command);
+                if(result){
+                    printf("Copy file unproperly\n");
+                    syslog(LOG_INFO, "Copy file unproperly\n");
+                }else{
+                    printf("Copy file properly");
+                    syslog(LOG_INFO, "Copy file properly");
+                }
+            }else if(x){
+                perror("This user doesn't have chosen file destination");
+            }else{
+                sprintf(not_found,"There is no user like: %s",topipe);
+                perror(not_found);
+            }
+        }else {
             sprintf(message2, "%s:%s", tab[0], tab[2]);
             printf("From; %s\nTo: %s\nMessage %s\n",tab[0], tab[1], tab[2]);
             if (write(fclient_write, message2, 255*sizeof(char)) < 0) {
