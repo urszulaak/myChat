@@ -189,18 +189,18 @@ void writeToUser(char *topipe, char *deleter, char *not_found, int *read_flag, c
                     printf("Copy file unproperly\n");
                     syslog(LOG_INFO, "Copy file unproperly\n");
                 }else{
-                    printf("Copy file properly");
-                    syslog(LOG_INFO, "Copy file properly");
+                    printf("Copy file properly\n");
+                    syslog(LOG_INFO, "Copy file properly\n");
                 }
             }else if(x){
-                perror("This user doesn't have chosen file destination");
+                perror("This user doesn't have chosen file destination\n");
             }else{
                 sprintf(not_found,"There is no user like: %s",topipe);
                 perror(not_found);
             }
         }else {
             sprintf(message2, "%s:%s", tab[0], tab[2]);
-            printf("From; %s\nTo: %s\nMessage %s\n",tab[0], tab[1], tab[2]);
+            printf("From: %s\nTo: %s\nMessage %s\n",tab[0], tab[1], tab[2]);
             if (write(fclient_write, message2, 255*sizeof(char)) < 0) {
                 perror("Write error");
                 syslog(LOG_INFO, "Write to user FIFO error");
