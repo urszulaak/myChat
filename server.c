@@ -96,7 +96,7 @@ void writeToUser(char *topipe, char *deleter, char *not_found, int *read_flag, c
             }
             c_user++;
         }else if(strncmp(tab[0],"deleted",7)==0){
-            printf("%s\n",tab[0]);
+            printf("%s",tab[0]);
             char *token;
             token = strtok(tab[0], " ");
             token = strtok(NULL, "");
@@ -109,42 +109,48 @@ void writeToUser(char *topipe, char *deleter, char *not_found, int *read_flag, c
                     break;
                 }
             }
-        }else if (strncmp(tab[0], "SEND", 4) == 0) {
+        }else if (strncmp(tab[0], "SEND", 4) == 0){
             char *token;
+            int i, x=0;
             token = strtok(tab[0], "-");
             token = strtok(NULL, "-");
-
-            char *filePath = token;
-            token = strtok(NULL, ":");
-            char *destDirPath = token;
-            char *fileName = basename(filePath);
-            char destFilePath[256];
-            sprintf(destFilePath, "%s/%s", destDirPath, fileName);
-
-            // Implement file copying
-            FILE *source = fopen(filePath, "rb");
-            FILE *destination = fopen(destFilePath, "wb");
-            if (!source || !destination) {
-                perror("Error opening file");
-                exit(EXIT_FAILURE);
+            sprintf(topipe, "pipe%s", token);
+            for(i=0;i<c_user;i++){
+                if(strcmp(users[i], topipe) == 0){
+                    x=1;
+                    break;
+                }else if(!(token)){
+                    x=0;
+                    break;
+                }
             }
-
-            char buffer[1024];
-            size_t bytesRead;
-            while ((bytesRead = fread(buffer, 1, sizeof(buffer), source)) > 0) {
-                fwrite(buffer, 1, bytesRead, destination);
+            if(!(strcmp(download_flag[i],"") == 0)){
+                token = strtok(NULL, ":");
+                char *filePath = token;
+                char *destDirPath = download_flag[i];
+                char command[256];
+                sprintf(command, "cp %s %s", filePath, destDirPath);
+                int result = system(command);
+                if(result){
+                    printf("Copy file unproperly\n");
+                    syslog(LOG_INFO, "Copy file unproperly\n");
+                }else{
+                    printf("Copy file properly");
+                    syslog(LOG_INFO, "Copy file properly");
+                }
+            }else if(x){
+                perror("This user doesn't have chosen file destination");
+            }else{
+                sprintf(not_found,"There is no user like: %s",topipe);
+                perror(not_found);
             }
-
-            fclose(source);
-            fclose(destination);
-            printf("File %s successfully copied to %s\n", fileName, destDirPath);
         }else{
             sprintf(not_found,"There is no user like: %s",topipe);
             perror(not_found);
         }
     }else{
         if(strncmp(tab[0],"deleted",7)==0){
-            printf("%s\n",tab[0]);
+            printf("%s",tab[0]);
             char *token;
             token = strtok(tab[0], " ");
             token = strtok(NULL, "");
@@ -157,51 +163,6 @@ void writeToUser(char *topipe, char *deleter, char *not_found, int *read_flag, c
                     break;
                 }
             }
-        }else if (strncmp(tab[0], "SEND", 4) == 0) {
-            char *token;
-            int i, x;
-            token = strtok(tab[2], ":");
-            token = strtok(NULL, ":");
-            for(i=0;i<c_user;i++){
-                if(users[i] == token){
-                    x=1;
-                    break;
-                }else{
-                    x=0;
-                }
-            }
-            if(x){
-                sprintf(not_found,"There is no user like: %s",topipe);
-                perror(not_found);
-            }else if(download_flag[i]){
-                //operacje zwiazane z wysylaniem pliku, gdzie pod zmienna download_flag[i] jest sciezka docelowa
-            }else{
-                perror("This user doesn't have chosen file destination");
-            }
-            char *filePath = token;
-            token = strtok(NULL, ":");
-            char *destDirPath = token;
-            char *fileName = basename(filePath);
-            char destFilePath[256];
-            sprintf(destFilePath, "%s/%s", destDirPath, fileName);
-
-            // Implement file copying
-            FILE *source = fopen(filePath, "rb");
-            FILE *destination = fopen(destFilePath, "wb");
-            if (!source || !destination) {
-                perror("Error opening file");
-                exit(EXIT_FAILURE);
-            }
-
-            char buffer[1024];
-            size_t bytesRead;
-            while ((bytesRead = fread(buffer, 1, sizeof(buffer), source)) > 0) {
-                fwrite(buffer, 1, bytesRead, destination);
-            }
-
-            fclose(source);
-            fclose(destination);
-            printf("File %s successfully copied to %s\n", fileName, destDirPath);
         } else {
             sprintf(message2, "%s:%s", tab[0], tab[2]);
             printf("From; %s\nTo: %s\nMessage %s\n",tab[0], tab[1], tab[2]);
