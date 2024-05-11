@@ -51,7 +51,7 @@ void createUser(int *fclient, char *name, char *info, int fserver_write, char *d
         syslog(LOG_INFO, "%s" ,info);
     }
 }
-void download(char *to, char *content, int fserver_write, char *message,char *message2,int fclient_read, char **argv)
+void download(char *to, char *content, int fserver_write, char *message, char **argv)
 {
         nodelay(stdscr, FALSE);
         echo();
@@ -78,8 +78,6 @@ void download(char *to, char *content, int fserver_write, char *message,char *me
         close(fserver_write);
         nodelay(stdscr, TRUE);
         noecho();
-    }
-    readFromUser(fclient_read, message2);
 }
 void writeToServer(char *to, char *content, int fserver_write, char *message, char **argv){
     nodelay(stdscr, FALSE);
@@ -181,7 +179,9 @@ int login(int argc, char **argv, char *downloadPath){
             if ((ch = getch()) == 's') {
                 writeToServer(to, content, fserver_write, message, argv);
             } else if ((ch = getch()) == 'd') {
-                download(to,content,fserver_write,message,message2,fclient_read,argv);
+                download(to,content,fserver_write,message,argv);
+            }
+        readFromUser(fclient_read, message2);
         }
         close(fclient_read);
     }
