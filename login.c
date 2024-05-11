@@ -51,34 +51,7 @@ void createUser(int *fclient, char *name, char *info, int fserver_write, char *d
         syslog(LOG_INFO, "%s" ,info);
     }
 }
-/*void download(char *to, char *content, int fserver_write, char *message, char **argv)
-{
-        nodelay(stdscr, FALSE);
-        echo();
-        printw("To whom: ");
-        refresh();
-        getstr(to);
-        printw("Enter the file path: ");
-        refresh();
-        getstr(content);
-        sprintf(message, "SEND-%s-%s",to, content);
-        fserver_write = open("pipeServer", O_WRONLY);
-        if (fserver_write < 0) {
-            endwin();
-            perror("Fserver error (write)");
-            exit(EXIT_FAILURE);
-        }
-        if (write(fserver_write, message, sizeof(message)) < 0) {
-            endwin();
-            perror("Write error");
-            syslog(LOG_INFO, "Write to server FIFO error");
-            close(fserver_write);
-            exit(EXIT_FAILURE);
-        }
-        close(fserver_write);
-        nodelay(stdscr, TRUE);
-        noecho();
-}*/
+
 void writeToServer(char *to, char *content, int fserver_write, char *message, char **argv){
     nodelay(stdscr, FALSE);
     echo();
@@ -179,34 +152,33 @@ int login(int argc, char **argv, char *downloadPath){
             if ((ch = getch()) == 's') {
                 writeToServer(to, content, fserver_write, message, argv);
             } else if ((ch = getch()) == 'd') {
-                //download(to, content, fserver_write, message, argv);
                  nodelay(stdscr, FALSE);
-        echo();
-        printw("To whom: ");
-        refresh();
-        getstr(to);
-        printw("Enter the file path: ");
-        refresh();
-        getstr(content);
-        sprintf(message, "SEND-%s-%s",to, content);
-        fserver_write = open("pipeServer", O_WRONLY);
-        if (fserver_write < 0) {
-            endwin();
-            perror("Fserver error (write)");
-            exit(EXIT_FAILURE);
-        }
-        if (write(fserver_write, message, sizeof(message)) < 0) {
-            endwin();
-            perror("Write error");
-            syslog(LOG_INFO, "Write to server FIFO error");
-            close(fserver_write);
-            exit(EXIT_FAILURE);
-        }
-        close(fserver_write);
-        nodelay(stdscr, TRUE);
-        noecho();
-            }
-        readFromUser(fclient_read, message2);
+                echo();
+                printw("To whom: ");
+                refresh();
+                getstr(to);
+                printw("Enter the file path: ");
+                refresh();
+                getstr(content);
+                sprintf(message, "SEND-%s-%s",to, content);
+                fserver_write = open("pipeServer", O_WRONLY);
+                if (fserver_write < 0) {
+                    endwin();
+                    perror("Fserver error (write)");
+                    exit(EXIT_FAILURE);
+                }
+                if (write(fserver_write, message, sizeof(message)) < 0) {
+                    endwin();
+                    perror("Write error");
+                    syslog(LOG_INFO, "Write to server FIFO error");
+                    close(fserver_write);
+                    exit(EXIT_FAILURE);
+                }
+                close(fserver_write);
+                nodelay(stdscr, TRUE);
+                noecho();
+                }
+            readFromUser(fclient_read, message2);
         }
         close(fclient_read);
     }
